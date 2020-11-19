@@ -6,7 +6,6 @@ import java.util.logging.FileHandler
 import java.util.logging.Formatter
 import java.util.logging.Level
 import java.util.logging.LogRecord
-import java.util.logging.Logger
 import so.codex.hawk.AppData
 import so.codex.hawk.logging.FileLoggingTree.Companion.DEFAULT_LOG_NAME
 import so.codex.hawk.logging.FileLoggingTree.Companion.LOGS_SUBFOLDER
@@ -39,8 +38,6 @@ class FileLoggingTree(
     fileLimit: Int = AppData.LIMIT_LOG_FILE
 ) : Timber.DebugTree() {
     /**
-     * @property LOGGER_NAME Name to receive the logger.
-     *
      * @property LOGS_SUBFOLDER contains the directory that will be created along the path
      *                          passed to logPath. Log files will be stored in this directory.
      *
@@ -48,15 +45,9 @@ class FileLoggingTree(
      *                            be named as follows: log0, log1 and so on.
      */
     companion object {
-        private const val LOGGER_NAME = "HAWK_LOGGER"
-        private const val LOGS_SUBFOLDER = "/logs"
+        private const val LOGS_SUBFOLDER = "logs"
         private const val DEFAULT_LOG_NAME = "log"
     }
-
-    /**
-     * @property logger contains an instance of the [Logger] class.
-     */
-    private val logger = Logger.getLogger(LOGGER_NAME)
 
     /**
      * @property NO_FORMATTER contains a stub to ignore the formatter from the [FileHandler].
@@ -66,14 +57,17 @@ class FileLoggingTree(
     }
 
     /**
+     * @property fileHandler an object that implements cyclic logging to a file on the device.
+     */
+    private val fileHandler: FileHandler
+
+    /**
      * Instance initialization block. Sets the necessary settings for correct operation.
      */
     init {
         val logPattern = createLogPattern()
-        val fileHandler = FileHandler(logPattern, sizeLimit, fileLimit, true)
+        fileHandler = FileHandler(logPattern, sizeLimit, fileLimit, true)
         fileHandler.formatter = NO_FORMATTER
-        logger.level = Level.ALL
-        logger.addHandler(fileHandler)
     }
 
     /**
@@ -94,12 +88,17 @@ class FileLoggingTree(
     override fun log(priority: Int, tag: String?, message: String, t: Throwable?) {
         super.log(priority, tag, message, t)
         if (t == null) {
-            logger.log(
-                fromPriorityToLevel(priority),
-                formatter.format(priority, tag, message)
+            fileHandler.publish(
+                LogRecord(
+                    fromPriorityToLevel(priority),
+                    formatter.format(priority, tag, message)
+                )
             )
         } else {
-            logger.log(fromPriorityToLevel(priority), "", t)
+            val logRecord =
+                LogRecord(fromPriorityToLevel(priority), formatter.format(priority, tag, message))
+            logRecord.thrown = t
+            fileHandler.publish(logRecord)
         }
     }
 
