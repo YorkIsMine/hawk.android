@@ -31,12 +31,7 @@ class SquircleImageView(context: Context, attrs: AttributeSet) :
     /**
      * @property path An instance of the path along which the resource will be trimmed.
      */
-    private var path: Path? = null
-
-    /**
-     * @property isOnMeasureWorked a flag that responds to the resizing of the view.
-     */
-    private var isOnMeasureWorked = false
+    private lateinit var path: Path
 
     /**
      * Method for rendering view to canvas.
@@ -45,24 +40,26 @@ class SquircleImageView(context: Context, attrs: AttributeSet) :
      * @see Canvas
      */
     override fun onDraw(canvas: Canvas?) {
-        if (path == null || isOnMeasureWorked) {
-            isOnMeasureWorked = false
-            path = createSquirclePath()
-        }
-        canvas?.clipPath(path!!)
+        canvas?.clipPath(path)
         super.onDraw(canvas)
     }
 
     /**
-     * Measure the view and its content to determine the measured width and the measured height.
+     * This is called during layout when the size of this view has changed. If
+     * you were just added to the view hierarchy, you're called with the old
+     * values of 0.
      *
-     * @param widthMeasureSpec horizontal space requirements as imposed by the parent.
+     * @param w Current width of this view.
      *
-     * @param heightMeasureSpec vertical space requirements as imposed by the parent.
+     * @param h Current height of this view.
+     *
+     * @param oldw Old width of this view.
+     *
+     * @param oldh Old height of this view.
      */
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        isOnMeasureWorked = true
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        path = createSquirclePath(w)
     }
 
     /**
@@ -70,7 +67,7 @@ class SquircleImageView(context: Context, attrs: AttributeSet) :
      *
      * @return clipping [Path].
      */
-    private fun createSquirclePath(): Path {
+    private fun createSquirclePath(width: Int): Path {
         val path = Path()
         val radius = (width / 2).toFloat()
         path.moveTo(-radius, 0f)
