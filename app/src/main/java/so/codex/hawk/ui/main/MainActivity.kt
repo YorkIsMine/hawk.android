@@ -2,7 +2,12 @@ package so.codex.hawk.ui.main
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import kotlinx.android.synthetic.main.activity_main.btn
+
 import so.codex.hawk.R
+import so.codex.hawk.notification.domain.NotificationContainer
+import so.codex.hawk.notification.model.NotificationModel
+import so.codex.hawk.notification.model.NotificationType
 
 /**
  * Main application class.
@@ -21,5 +26,27 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        btn.setOnClickListener{
+            notificationContainer.show(NotificationModel("error",NotificationType.ERROR))
+        }
+    }
+
+
+
+
+    /**
+     * @property notificationContainer A container that delegates logic for processing and displaying
+     * notifications
+     */
+    private val notificationContainer = NotificationContainer()
+
+    override fun onStart() {
+        super.onStart()
+        notificationContainer.attach(this)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        notificationContainer.detach()
     }
 }
