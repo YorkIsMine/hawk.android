@@ -5,7 +5,6 @@ import android.graphics.Canvas
 import android.graphics.Path
 import android.util.AttributeSet
 import kotlin.math.abs
-import kotlin.math.ln
 import kotlin.math.pow
 
 /**
@@ -99,7 +98,7 @@ class SquircleImageView(context: Context, attrs: AttributeSet) :
     private fun calculationY(radius: Float, x: Float): Float {
         val yN = 1 - (abs(x / radius).pow(n))
         val base = yN * ((radius).pow(n)).toDouble()
-        val y = abs(Math.E.pow(ln(base) / n))
+        val y = base.pow(1.0 / n.toDouble())
         return y.toFloat()
     }
 }
