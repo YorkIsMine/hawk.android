@@ -71,7 +71,6 @@ class NotificationContainer : NotificationView {
      * @param model data that contains information for showing notification
      */
     override fun show(model: NotificationModel) {
-        Timber.e("#info container is null $container")
         if (container == null) {
         } else {
             container?.updateNotification(model)

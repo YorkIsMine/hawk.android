@@ -6,6 +6,8 @@ import android.graphics.Outline
 import android.graphics.Rect
 import android.os.Handler
 import android.os.Looper
+import android.transition.Fade
+import android.transition.TransitionManager
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.Gravity
@@ -40,16 +42,17 @@ class NotificationContainerView @JvmOverloads constructor(
      */
     private val density = context.resources.displayMetrics.density
 
-    /**
-     * @property notification View of notification
-     */
-    private var notification: FrameLayout? = null
 
     /**
      * @property notificationHandler The handler that can processing delayed task for hide
      * notification
      */
     private val notificationHandler = Handler(Looper.getMainLooper())
+
+    private val queueNotification = mutableListOf<FrameLayout>()
+
+    private val DEFAILT_SHOW_PERIOD = 5000L
+    private val QUEUE_SHOW_PERIOD = 3000L
 
     /**
      * Calculate margins and padding for container
@@ -121,17 +124,19 @@ class NotificationContainerView @JvmOverloads constructor(
     /**
      * Create notification and inflate the container with the contents by [model]
      */
+    var count = 0
     fun updateNotification(model: NotificationModel) {
-        notification = FrameLayout(context)
-        notification!!.setupLayoutParams()
-        notification!!.setBackgroundColor(
+        Timber.i("Пришло новое сообщение $count")
+        val notification = FrameLayout(context)
+        notification.setupLayoutParams()
+        notification.setBackgroundColor(
             ContextCompat.getColor(
                 context,
                 R.color.notification_background_color
             )
         )
-        notification!!.elevation = 8.toDpFloat()
-        notification!!.outlineProvider = object : ViewOutlineProvider() {
+        notification.elevation = 8.toDpFloat()
+        notification.outlineProvider = object : ViewOutlineProvider() {
             override fun getOutline(view: View, outline: Outline) {
                 val rect = Rect()
                 view.getDrawingRect(rect)
@@ -139,31 +144,64 @@ class NotificationContainerView @JvmOverloads constructor(
             }
         }
 
-        notification!!.clipToOutline = true
+        notification.clipToOutline = true
         val message = TextView(context)
-        message.text = model.text
+        message.text = "${model.text} = $count"
+        count++
         message.typeface = ResourcesCompat.getFont(context, R.font.roboto_medium)
         message.setTextColor(ContextCompat.getColor(context, R.color.notification_text_error_color))
         message.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14F)
         message.layoutParams = getNotificationTextLayoutParams()
         message.gravity = Gravity.CENTER
-        notification!!.addView(message)
-        notification!!.setOnClickListener {
+        notification.addView(message)
+        notification.setOnClickListener {
             hideNotification()
         }
-        addView(notification)
-        notificationHandler.postDelayed(::hideNotification, 5000)
-        visibility = View.VISIBLE
+        if (queueNotification.isEmpty()) {
+            Timber.i("The queue is empty, added the first notification")
+            TransitionManager.beginDelayedTransition(this, Fade())
+            addView(notification)
+            notificationHandler.postDelayed(::checkingNewNotification, QUEUE_SHOW_PERIOD)
+            notificationHandler.postDelayed(::hideNotification, DEFAILT_SHOW_PERIOD)
+            visibility = View.VISIBLE
+        }
+        queueNotification.add(notification)
     }
 
     /**
      * Internal function for hide notification by time or click on them
      */
     private fun hideNotification() {
-        Timber.e("#info hide notification")
         notificationHandler.removeCallbacksAndMessages(null)
-        if (notification != null)
+        if (queueNotification.size > 1) {
+            showNextNotificationFromQueue()
+            Timber.i("Removed a notification from the queue on click.")
+        } else if (queueNotification.size == 1) {
+            val notification = queueNotification.removeAt(0)
+            TransitionManager.beginDelayedTransition(this, Fade())
             removeView(notification)
+            Timber.i("Removed a last notification from queue.")
+        }
+    }
+
+    private fun checkingNewNotification() {
+        Timber.i("Checking queue notifications.")
+        if (queueNotification.size > 1) {
+            Timber.i("Queue notifications is not empty.")
+            notificationHandler.removeCallbacksAndMessages(null)
+            showNextNotificationFromQueue()
+        }
+    }
+
+
+    private fun showNextNotificationFromQueue(){
+        val notification = queueNotification.removeAt(0)
+        TransitionManager.beginDelayedTransition(this, Fade())
+        removeView(notification)
+        TransitionManager.beginDelayedTransition(this, Fade())
+        addView(queueNotification[0])
+        notificationHandler.postDelayed(::checkingNewNotification, QUEUE_SHOW_PERIOD)
+        notificationHandler.postDelayed(::hideNotification, DEFAILT_SHOW_PERIOD)
     }
 
     /**
